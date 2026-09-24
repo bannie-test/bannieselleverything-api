@@ -107,9 +107,9 @@ public class CustomerAuthController(AppDbContext db, TokenService tokens) : Cont
 
     [HttpGet("account/orders/{orderNumber}")]
     [Authorize(Policies.Customer)]
-    public async Task<ActionResult<OrderDto>> MyOrder(string orderNumber, CancellationToken ct)
+    public async Task<ActionResult<OrderDto>> MyOrder(string orderNumber, [FromServices] OrderService orders, CancellationToken ct)
     {
-        var order = await db.Orders.AsNoTracking().Include(o => o.Items)
+        var order = await orders.WithDetails().AsNoTracking()
             .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber && o.CustomerId == User.CustomerId(), ct);
         return order is null ? NotFound() : order.ToDto(customerMayCancel: true);
     }
@@ -122,10 +122,10 @@ public class CustomerAuthController(AppDbContext db, TokenService tokens) : Cont
         var order = await orders.FindAsync(orderNumber, ct);
         if (order is null || order.CustomerId != User.CustomerId())
             return NotFound();
-        if (order.Status != OrderStatus.Pending)
+        if (!OrderMapping.IsCustomerCancellable(order.Status))
             throw ApiException.BadRequest("This order is already being processed and can no longer be cancelled here. Please contact the shop.");
 
-        await orders.ChangeStatusAsync(order, OrderStatus.Cancelled, ct);
+        await orders.ChangeStatusAsync(order, OrderStatus.Cancelled, ct, new StatusChangeDetails(Note: "Cancelled by the customer"));
         return order.ToDto(customerMayCancel: true);
     }
 

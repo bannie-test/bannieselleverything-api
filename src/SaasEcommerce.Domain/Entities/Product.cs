@@ -20,6 +20,10 @@ public class Product : TenantEntityBase
     public List<string> Images { get; set; } = [];
     public Dictionary<string, string> Attributes { get; set; } = [];
 
+    /// <summary>Denormalized from product_reviews so lists can filter and sort by rating. Null when unreviewed.</summary>
+    public double? RatingAverage { get; set; }
+    public int ReviewCount { get; set; }
+
     /// <summary>Maps to PostgreSQL xmin. Guards concurrent stock updates.</summary>
     public uint Version { get; set; }
 }

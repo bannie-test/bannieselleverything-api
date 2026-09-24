@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SaasEcommerce.Domain.Entities;
+using SaasEcommerce.Domain.Enums;
 
 namespace SaasEcommerce.Infrastructure.Persistence.Configurations;
 
@@ -41,6 +42,9 @@ internal class OrderConfiguration : IEntityTypeConfiguration<Order>
         b.Property(o => o.CustomerEmail).HasMaxLength(256).IsRequired();
         b.Property(o => o.Currency).HasMaxLength(3).IsFixedLength().IsRequired();
         b.Property(o => o.Notes).HasMaxLength(2000);
+        b.Property(o => o.PaymentMethod).HasDefaultValue(PaymentMethod.CashOnDelivery).HasSentinel(PaymentMethod.CashOnDelivery);
+        b.Property(o => o.ShippingCarrier).HasMaxLength(100);
+        b.Property(o => o.TrackingNumber).HasMaxLength(100);
         b.OwnsOne(o => o.ShippingAddress, a => a.ToJson());
         b.Property(o => o.Version).IsRowVersion();
 
@@ -52,6 +56,7 @@ internal class OrderConfiguration : IEntityTypeConfiguration<Order>
         b.HasOne(o => o.Customer).WithMany().HasForeignKey(o => o.CustomerId).OnDelete(DeleteBehavior.Restrict);
         b.HasMany(o => o.Items).WithOne(i => i.Order).HasForeignKey(i => i.OrderId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(o => o.Payments).WithOne(p => p.Order).HasForeignKey(p => p.OrderId).OnDelete(DeleteBehavior.Restrict);
+        b.HasMany(o => o.Events).WithOne(e => e.Order).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
 
         b.ToTable(t => t.HasCheckConstraint("ck_orders_total",
             "subtotal_minor >= 0 AND shipping_minor >= 0 AND total_minor = subtotal_minor + shipping_minor"));
@@ -89,5 +94,14 @@ internal class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.HasIndex(p => new { p.Status, p.CreatedAt });
 
         b.ToTable(t => t.HasCheckConstraint("ck_payments_amount_positive", "amount_minor > 0"));
+    }
+}
+
+internal class OrderStatusEventConfiguration : IEntityTypeConfiguration<OrderStatusEvent>
+{
+    public void Configure(EntityTypeBuilder<OrderStatusEvent> b)
+    {
+        b.Property(e => e.Note).HasMaxLength(500);
+        b.HasIndex(e => new { e.OrderId, e.OccurredAt });
     }
 }

@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,13 +13,36 @@ namespace SaasEcommerce.Api.Features.Admin;
 
 public record AdminOrderQuery(string? Q, OrderStatus? Status, int Page = 1, int PageSize = 20);
 
-public record ChangeOrderStatusRequest(OrderStatus Status);
+/// <summary>Carrier and tracking number are used when moving to Shipped; the note is shown on the customer's timeline.</summary>
+public record ChangeOrderStatusRequest(OrderStatus Status, string? ShippingCarrier = null, string? TrackingNumber = null, string? Note = null);
+
+public record UpdateTrackingRequest(string? ShippingCarrier, string? TrackingNumber);
+
+public class ChangeOrderStatusValidator : AbstractValidator<ChangeOrderStatusRequest>
+{
+    public ChangeOrderStatusValidator()
+    {
+        RuleFor(x => x.ShippingCarrier).MaximumLength(100);
+        RuleFor(x => x.TrackingNumber).MaximumLength(100);
+        RuleFor(x => x.Note).MaximumLength(500);
+    }
+}
+
+public class UpdateTrackingValidator : AbstractValidator<UpdateTrackingRequest>
+{
+    public UpdateTrackingValidator()
+    {
+        RuleFor(x => x.ShippingCarrier).MaximumLength(100);
+        RuleFor(x => x.TrackingNumber).MaximumLength(100);
+    }
+}
 
 public record AdminOrderDto(OrderDto Order, OrderStatus[] NextStatuses);
 
 public record DashboardDto(
     int OrdersToday, long RevenueTodayMinor, int PendingOrders, int LowStockProducts, int ActiveProducts,
-    long Revenue30DaysMinor, int Orders30Days, string Currency, List<DailyRevenue> Daily);
+    long Revenue30DaysMinor, int Orders30Days, string Currency, List<DailyRevenue> Daily,
+    int AwaitingPaymentOrders, int OpenSupportTickets);
 
 public record DailyRevenue(DateOnly Date, long RevenueMinor, int Orders);
 
@@ -63,7 +87,18 @@ public class AdminOrdersController(AppDbContext db, OrderService orders, ITenant
         var order = await orders.FindAsync(orderNumber, ct);
         if (order is null)
             return NotFound();
-        await orders.ChangeStatusAsync(order, request.Status, ct);
+        await orders.ChangeStatusAsync(order, request.Status, ct,
+            new StatusChangeDetails(request.ShippingCarrier, request.TrackingNumber, request.Note));
+        return Respond(order);
+    }
+
+    [HttpPut("orders/{orderNumber}/tracking")]
+    public async Task<ActionResult<AdminOrderDto>> UpdateTracking(string orderNumber, UpdateTrackingRequest request, CancellationToken ct)
+    {
+        var order = await orders.FindAsync(orderNumber, ct);
+        if (order is null)
+            return NotFound();
+        await orders.UpdateTrackingAsync(order, request.ShippingCarrier, request.TrackingNumber, ct);
         return Respond(order);
     }
 
@@ -97,7 +132,9 @@ public class AdminOrdersController(AppDbContext db, OrderService orders, ITenant
             Revenue30DaysMinor: daily.Sum(d => d.RevenueMinor),
             Orders30Days: daily.Sum(d => d.Orders),
             Currency: await db.Tenants.Where(t => t.Id == tenant.RequiredTenantId).Select(t => t.Settings.Currency).FirstAsync(ct),
-            Daily: daily);
+            Daily: daily,
+            AwaitingPaymentOrders: await db.Orders.CountAsync(o => o.Status == OrderStatus.AwaitingPayment, ct),
+            OpenSupportTickets: await db.SupportTickets.CountAsync(t => t.Status == SupportTicketStatus.Open, ct));
     }
 
     private static AdminOrderDto Respond(Domain.Entities.Order order) =>

@@ -24,3 +24,12 @@ public enum AuthRealm { Storefront, Admin, Platform }
 public enum AuditAction { Created, Updated, Deleted }
 
 public enum ActorType { System, User, Customer, Gateway }
+
+/// <summary>How the customer pays. Bank transfer orders wait in AwaitingPayment until the shop confirms the money arrived.</summary>
+public enum PaymentMethod { CashOnDelivery, BankTransfer }
+
+public enum NotificationType { OrderUpdate, SupportReply }
+
+public enum SupportTicketStatus { Open, Answered, Closed }
+
+public enum SupportAuthorType { Customer, Staff }

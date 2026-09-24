@@ -9,11 +9,14 @@ public record AddressDto(string RecipientName, string Phone, string Province, st
 
 public record OrderItemDto(Guid ProductId, string ProductName, long UnitPriceMinor, int Quantity, long LineTotalMinor);
 
+public record OrderEventDto(OrderStatus Status, string? Note, DateTimeOffset OccurredAt);
+
 public record OrderDto(
     Guid Id, string OrderNumber, OrderStatus Status, string CustomerEmail, bool IsGuest,
     long SubtotalMinor, long ShippingMinor, long TotalMinor, string Currency,
     AddressDto ShippingAddress, string? Notes, DateTimeOffset PlacedAt, List<OrderItemDto> Items,
-    bool CanCancel);
+    bool CanCancel, PaymentMethod PaymentMethod, DateTimeOffset? PaidAt, string? ShippingCarrier, string? TrackingNumber,
+    List<OrderEventDto> Timeline);
 
 public record OrderSummaryDto(Guid Id, string OrderNumber, OrderStatus Status, string CustomerEmail, string RecipientName,
     long TotalMinor, string Currency, int ItemCount, DateTimeOffset PlacedAt);
@@ -37,7 +40,16 @@ public static class OrderMapping
     public static bool IsCancellable(OrderStatus status) =>
         status is OrderStatus.Pending or OrderStatus.AwaitingPayment or OrderStatus.Paid or OrderStatus.Processing;
 
+    /// <summary>Customers may cancel on their own only before the shop confirms or receives payment.</summary>
+    public static bool IsCustomerCancellable(OrderStatus status) => status is OrderStatus.Pending or OrderStatus.AwaitingPayment;
+
     public static AddressDto ToDto(this AddressSnapshot a) => new(a.RecipientName, a.Phone, a.Province, a.District, a.Ward, a.StreetAddress);
+
+    public static AddressSnapshot ToSnapshot(this CustomerAddress a) => new()
+    {
+        RecipientName = a.RecipientName, Phone = a.Phone, Province = a.Province,
+        District = a.District, Ward = a.Ward, StreetAddress = a.StreetAddress,
+    };
 
     public static AddressSnapshot ToSnapshot(this AddressDto a) => new()
     {
@@ -51,7 +63,9 @@ public static class OrderMapping
         o.SubtotalMinor, o.ShippingMinor, o.TotalMinor, o.Currency,
         o.ShippingAddress.ToDto(), o.Notes, o.PlacedAt,
         o.Items.OrderBy(i => i.CreatedAt).Select(i => new OrderItemDto(i.ProductId, i.ProductNameSnapshot, i.UnitPriceMinor, i.Quantity, i.LineTotalMinor)).ToList(),
-        customerMayCancel ? o.Status == OrderStatus.Pending : IsCancellable(o.Status));
+        customerMayCancel ? IsCustomerCancellable(o.Status) : IsCancellable(o.Status),
+        o.PaymentMethod, o.PaidAt, o.ShippingCarrier, o.TrackingNumber,
+        o.Events.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new OrderEventDto(e.Status, e.Note, e.OccurredAt)).ToList());
 
     public static IQueryable<OrderSummaryDto> ToSummaries(this IQueryable<Order> orders) => orders.Select(o => new OrderSummaryDto(
         o.Id, o.OrderNumber, o.Status, o.CustomerEmail, o.ShippingAddress.RecipientName, o.TotalMinor, o.Currency,
