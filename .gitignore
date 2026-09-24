@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.DotSettings.user
+TestResults/
+*.trx
+coverage*/
+
+## Secrets and local config — never commit real credentials
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+secrets.json
+
+## OS
+.DS_Store
+Thumbs.db
