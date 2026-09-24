@@ -50,6 +50,12 @@ public class AppDbContext(
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
+    public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+    public DbSet<OrderStatusEvent> OrderStatusEvents => Set<OrderStatusEvent>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
 
     /// <summary>
     /// Physically deletes a soft-deletable entity on the next SaveChanges.
@@ -74,6 +80,10 @@ public class AppDbContext(
         builder.Properties<AuthRealm>().HaveConversion<string>().HaveMaxLength(32);
         builder.Properties<AuditAction>().HaveConversion<string>().HaveMaxLength(32);
         builder.Properties<ActorType>().HaveConversion<string>().HaveMaxLength(32);
+        builder.Properties<PaymentMethod>().HaveConversion<string>().HaveMaxLength(32);
+        builder.Properties<NotificationType>().HaveConversion<string>().HaveMaxLength(32);
+        builder.Properties<SupportTicketStatus>().HaveConversion<string>().HaveMaxLength(32);
+        builder.Properties<SupportAuthorType>().HaveConversion<string>().HaveMaxLength(32);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

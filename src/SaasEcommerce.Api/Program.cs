@@ -7,7 +7,9 @@ using Microsoft.IdentityModel.Tokens;
 using SaasEcommerce.Api.Auth;
 using SaasEcommerce.Api.Common;
 using SaasEcommerce.Api.Features.Cart;
+using SaasEcommerce.Api.Features.Notifications;
 using SaasEcommerce.Api.Features.Orders;
+using SaasEcommerce.Api.Features.Reviews;
 using SaasEcommerce.Api.Seeding;
 using SaasEcommerce.Api.Tenancy;
 using SaasEcommerce.Application.Common.Auditing;
@@ -59,6 +61,8 @@ builder.Services.AddAuthorizationBuilder()
 // Features.
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<ReviewService>();
+builder.Services.AddScoped<NotificationService>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddControllers(o => o.Filters.Add<ValidationFilter>())
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));

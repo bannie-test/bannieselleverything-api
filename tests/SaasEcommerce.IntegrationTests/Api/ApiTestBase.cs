@@ -89,6 +89,23 @@ public abstract class ApiTestBase(PostgresFixture db) : IDisposable
         return (await ReadAsync<JsonElement>(response)).GetProperty("accessToken").GetString()!;
     }
 
+    /// <summary>Registers a customer at the shop and returns a client signed in as them.</summary>
+    protected async Task<HttpClient> CustomerClientAsync(Shop shop, string? name = null)
+    {
+        var email = $"c-{Guid.NewGuid():N}@test.local";
+        var auth = await ReadAsync<JsonElement>(await ClientFor(shop.Slug).PostAsJsonAsync("api/storefront/auth/register",
+            new { email, password = "Customer@123", fullName = name ?? "Test Customer" }));
+        return ClientFor(shop.Slug, auth.GetProperty("accessToken").GetString());
+    }
+
+    /// <summary>Adds the product to the client's cart and checks out; returns the order.</summary>
+    protected static async Task<JsonElement> PlaceOrderAsync(HttpClient client, Guid productId, int quantity = 1, string paymentMethod = "CashOnDelivery")
+    {
+        await ReadAsync<JsonElement>(await client.PostAsJsonAsync("api/storefront/cart/items", new { productId, quantity }));
+        return await ReadAsync<JsonElement>(await client.PostAsJsonAsync("api/storefront/checkout",
+            new { shippingAddress = Address, paymentMethod }));
+    }
+
     protected static object Address => new
     {
         recipientName = "Nguyen Van A", phone = "0901234567", province = "Ho Chi Minh", district = "District 1",

@@ -13,7 +13,8 @@ public class CheckoutRequestValidator : AbstractValidator<CheckoutRequest>
         // Guests must give an email; signed-in customers use their account email.
         RuleFor(x => x.Email).NotEmpty().When(_ => http.HttpContext?.User.CustomerId() is null);
         RuleFor(x => x.Email).EmailAddress().MaximumLength(256).When(x => !string.IsNullOrEmpty(x.Email));
-        RuleFor(x => x.ShippingAddress).NotNull().SetValidator(new AddressValidator());
+        RuleFor(x => x.ShippingAddress).NotNull().SetValidator(new AddressValidator()!).When(x => x.AddressId is null);
+        RuleFor(x => x.PaymentMethod).IsInEnum();
         RuleFor(x => x.Notes).MaximumLength(2000);
     }
 }

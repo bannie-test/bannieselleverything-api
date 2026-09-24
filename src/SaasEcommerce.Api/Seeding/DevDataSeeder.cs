@@ -40,6 +40,10 @@ public static class DevDataSeeder
                 ContactPhone = "028 1234 5678",
                 Address = "12 Nguyen Hue, District 1, Ho Chi Minh City",
                 FlatShippingMinor = 30_000,
+                BankTransferEnabled = true,
+                BankName = "Vietcombank",
+                BankAccountNumber = "0071000123456",
+                BankAccountName = "SOPIFY DEMO STORE",
             },
         };
         db.Tenants.Add(tenant);

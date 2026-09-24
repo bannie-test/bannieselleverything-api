@@ -6,8 +6,11 @@ using SaasEcommerce.Infrastructure.Persistence;
 
 namespace SaasEcommerce.Api.Features.Catalog;
 
+/// <summary>Bank details are only included when the shop has bank transfer turned on.</summary>
+public record BankTransferInfoDto(string BankName, string AccountNumber, string AccountName);
+
 public record TenantInfoDto(string Slug, string Name, string? LogoUrl, string PrimaryColor, string Currency,
-    long FlatShippingMinor, string? ContactEmail, string? ContactPhone, string? Address);
+    long FlatShippingMinor, string? ContactEmail, string? ContactPhone, string? Address, BankTransferInfoDto? BankTransfer);
 
 /// <summary>Public, read-only shop data. Only active categories and products are visible.</summary>
 [ApiController]
@@ -20,7 +23,8 @@ public class StorefrontController(AppDbContext db, ITenantContext tenant) : Cont
     {
         var t = await db.Tenants.AsNoTracking().FirstAsync(t => t.Id == tenant.RequiredTenantId, ct);
         return new TenantInfoDto(t.Slug, t.Name, t.Settings.LogoUrl, t.Settings.PrimaryColor, t.Settings.Currency,
-            t.Settings.FlatShippingMinor, t.Settings.ContactEmail, t.Settings.ContactPhone, t.Settings.Address);
+            t.Settings.FlatShippingMinor, t.Settings.ContactEmail, t.Settings.ContactPhone, t.Settings.Address,
+            t.Settings.BankTransferEnabled ? new BankTransferInfoDto(t.Settings.BankName ?? "", t.Settings.BankAccountNumber ?? "", t.Settings.BankAccountName ?? "") : null);
     }
 
     [HttpGet("categories")]
@@ -46,17 +50,15 @@ public class StorefrontController(AppDbContext db, ITenantContext tenant) : Cont
 
         var products = db.Products.AsNoTracking()
             .Where(p => p.IsActive && (p.Category == null || p.Category.IsActive))
-            .ApplySearch(query.Q, categoryIds);
+            .ApplySearch(query.Q, categoryIds)
+            .ApplyFilters(query);
 
         var total = await products.CountAsync(ct);
         var items = await products
             .ApplySort(query.Sort)
             .Skip((query.SafePage - 1) * query.SafePageSize)
             .Take(query.SafePageSize)
-            .Select(p => new ProductSummaryDto(
-                p.Id, p.Name, p.Slug, p.PriceMinor, p.CompareAtPriceMinor, p.Currency,
-                p.Images.FirstOrDefault(), p.StockQuantity > 0,
-                p.Category == null ? null : new CategoryRef(p.Category.Id, p.Category.Name, p.Category.Slug)))
+            .ToSummaries()
             .ToListAsync(ct);
 
         return new PagedResult<ProductSummaryDto>(items, query.SafePage, query.SafePageSize, total);
