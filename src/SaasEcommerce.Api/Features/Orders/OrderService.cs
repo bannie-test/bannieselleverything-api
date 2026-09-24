@@ -157,7 +157,7 @@ public class OrderService(
     /// Moves an order along its lifecycle. Cancelling returns reserved stock; shipping commits it.
     /// Every change is added to the order's timeline and, for account orders, notified to the customer.
     /// </summary>
-    public async Task ChangeStatusAsync(Order order, OrderStatus next, CancellationToken ct, StatusChangeDetails? details = null)
+    public async Task ChangeStatusAsync(Order order, OrderStatus next, StatusChangeDetails? details, CancellationToken ct)
     {
         if (!AllowedTransitions.TryGetValue(order.Status, out var allowed) || !allowed.Contains(next))
             throw ApiException.BadRequest($"An order that is {order.Status} can't be moved to {next}.");

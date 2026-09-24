@@ -125,7 +125,7 @@ public class CustomerAuthController(AppDbContext db, TokenService tokens) : Cont
         if (!OrderMapping.IsCustomerCancellable(order.Status))
             throw ApiException.BadRequest("This order is already being processed and can no longer be cancelled here. Please contact the shop.");
 
-        await orders.ChangeStatusAsync(order, OrderStatus.Cancelled, ct, new StatusChangeDetails(Note: "Cancelled by the customer"));
+        await orders.ChangeStatusAsync(order, OrderStatus.Cancelled, new StatusChangeDetails(Note: "Cancelled by the customer"), ct);
         return order.ToDto(customerMayCancel: true);
     }
 

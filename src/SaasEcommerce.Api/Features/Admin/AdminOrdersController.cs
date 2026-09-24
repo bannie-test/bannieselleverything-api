@@ -87,8 +87,8 @@ public class AdminOrdersController(AppDbContext db, OrderService orders, ITenant
         var order = await orders.FindAsync(orderNumber, ct);
         if (order is null)
             return NotFound();
-        await orders.ChangeStatusAsync(order, request.Status, ct,
-            new StatusChangeDetails(request.ShippingCarrier, request.TrackingNumber, request.Note));
+        await orders.ChangeStatusAsync(order, request.Status,
+            new StatusChangeDetails(request.ShippingCarrier, request.TrackingNumber, request.Note), ct);
         return Respond(order);
     }
 
